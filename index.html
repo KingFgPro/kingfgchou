@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抽奖系统 - V9.5</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system}
+body{min-height:100vh;background:linear-gradient(135deg,#0b3b29,#145c42,#0c4734);color:#fff}
+.glass{background:rgba(255,255,255,0.08);backdrop-filter:blur(12px);border:1px solid rgba(100,255,180,0.25);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,0.25)}
+.glass-btn{background:rgba(80,230,160,0.22);border:1px solid rgba(100,255,180,0.35);color:#d8ffe9;padding:9px 14px;border-radius:10px;cursor:pointer;transition:0.2s}
+.glass-btn:hover{background:rgba(80,230,160,0.4)}
+.glass-btn:disabled{opacity:0.45;cursor:not-allowed}
+.glass-btn-danger{background:rgba(255,80,80,0.22);border-color:rgba(255,100,100,0.35);color:#ffd8d8}
+.hide{display:none!important}
+.login-wrap{width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.login-card{width:340px;padding:28px}
+.login-card h2{text-align:center;margin-bottom:24px;color:#a4ffd0}
+.inp{width:100%;padding:12px 14px;background:rgba(255,255,255,0.07);border:1px solid rgba(100,255,180,0.22);border-radius:10px;color:#fff;margin-bottom:14px;outline:none}
+textarea.inp{resize:vertical;font-family:inherit}
+.app-wrap{display:flex;min-height:100vh}
+.sidebar{width:270px;padding:20px;flex-shrink:0}
+.main{flex:1;padding:20px;overflow:auto}
+.user-bar{padding-bottom:16px;border-bottom:1px solid rgba(100,255,180,0.2);margin-bottom:16px}
+.box{padding:18px;margin-bottom:16px}
+.consume-tip{font-size:18px;margin:12px 0 20px;color:#a4ffd0;font-weight:500}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:999}
+.modal-inner{width:92%;max-width:720px;max-height:85vh;overflow:auto;padding:24px}
+.modal-small{max-width:420px}
+.shop-item,.bag-item{padding:12px;margin:8px 0;border:1px solid rgba(100,255,180,0.2);border-radius:10px}
+.lottery-result-large{font-size:42px;font-weight:bold;margin:24px 0;color:#b8ffdd;min-height:60px;display:flex;align-items:center;justify-content:center}
+.tip-text{font-size:14px;line-height:1.7;color:#d0f7e4}
+.bottom-version-info{font-size:12px;color:#a0c9b7;padding:8px 18px}
+.admin-panel{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1500;display:flex;align-items:center;justify-content:center}
+.admin-inner{width:95%;max-width:1000px;max-height:90vh;overflow:auto;padding:24px}
+.admin-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.admin-tab{padding:8px 14px;border-radius:10px;cursor:pointer;border:1px solid rgba(100,255,180,0.3);background:rgba(255,255,255,0.05);color:#d8ffe9;font-size:14px}
+.admin-tab.active{background:rgba(80,230,160,0.35);border-color:rgba(100,255,180,0.6)}
+.admin-table{width:100%;border-collapse:collapse;margin-top:10px}
+.admin-table th,.admin-table td{padding:8px 10px;border-bottom:1px solid rgba(100,255,180,0.15);text-align:left;font-size:13px}
+.admin-table th{color:#89ffc6}
+.admin-section{display:none}.admin-section.active{display:block}
+.vip-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:bold;margin-left:6px;color:#fff}
+.vip-normal{background:#07c160}.vip-super{background:#fbbf24;color:#000}
+.toolbox-panel{position:fixed;bottom:20px;right:20px;z-index:1400;width:280px;padding:16px}
+.toolbox-title{color:#fbbf24;margin-bottom:12px;font-size:16px;display:flex;align-items:center;gap:6px;font-weight:bold}
+.toolbox-grid{display:grid;gap:8px}
+.version-item{padding:10px 12px;border-left:3px solid rgba(100,255,180,0.5);margin:8px 0;background:rgba(255,255,255,0.04);border-radius:0 8px 8px 0}
+.version-item h5{color:#a4ffd0;margin-bottom:4px;font-size:14px}
+.version-item p{font-size:13px;color:#d0f7e4;line-height:1.6}
+.version-item .vdate{font-size:11px;color:#8fb8a5;margin-top:4px}
+.admin-entry{text-align:center;margin-top:18px}
+.admin-entry span{font-size:11px;color:rgba(160,201,183,0.45);cursor:pointer;letter-spacing:1px;transition:0.2s}
+.admin-entry span:hover{color:rgba(160,201,183,0.95)}
+</style>
+</head>
+<body>
+
+<!-- ================= 登录页 ================= -->
+<div class="login-wrap" id="loginPage">
+    <div class="glass login-card">
+        <h2>🎁抽奖系统</h2>
+        <input class="inp" id="regname" placeholder="输入用户名（无需密码）">
+        <button class="glass-btn" onclick="doReg()">注册账号</button>
+        <div style="margin:14px 0;text-align:center">——已有账号——</div>
+        <input class="inp" id="loginname" placeholder="输入用户名登录">
+        <button class="glass-btn" onclick="doLogin()">登录</button>
+
+        <!-- 低调的管理员入口 -->
+        <div class="admin-entry">
+            <span onclick="openAdminLogin()">· 管理员 ·</span>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 主界面 ================= -->
+<div class="app-wrap hide" id="mainPage">
+    <div class="sidebar">
+        <div class="glass user-bar box">
+            <h3>👤 <span id="curUser">-</span><span id="vipTag"></span></h3>
+            <p>💰积分：<span id="curPoint">0</span></p>
+            <p style="margin-top:6px">🧩碎片：<span id="curFragment">0</span></p>
+            <button class="glass-btn" style="width:100%;margin-top:10px" onclick="logout()">退出登录</button>
+        </div>
+        <div class="glass box">
+            <h4>🎰抽奖</h4>
+            <div style="margin-top:10px;display:grid;gap:8px">
+                <button id="lotteryBtn" class="glass-btn" onclick="startLottery()">开始抽奖（消耗10积分）</button>
+                <button class="glass-btn" onclick="startLottery10()" style="background:rgba(245,175,25,0.25);border-color:rgba(245,175,25,0.5);color:#ffd98a">10连抽（消耗90积分）</button>
+                <button class="glass-btn" onclick="openPrizePoolView()">查看全部奖池</button>
+            </div>
+        </div>
+        <div class="glass box">
+            <div style="display:grid;gap:8px">
+                <button class="glass-btn" onclick="openShop()">🛒兑换商城</button>
+                <button class="glass-btn" onclick="openBag()">🎒我的背包</button>
+            </div>
+        </div>
+        <div class="glass box">
+            <h4>🧩 碎片</h4>
+            <div style="margin-top:10px;display:grid;gap:8px">
+                <button class="glass-btn" onclick="openFragmentShop()">🧩 碎片兑换</button>
+            </div>
+        </div>
+        <div class="glass box">
+            <h4>👑 VIP</h4>
+            <div style="margin-top:10px;display:grid;gap:8px">
+                <button class="glass-btn" onclick="openVipModal()">💎 VIP/SVIP兑换</button>
+            </div>
+        </div>
+        <div class="glass box">
+            <h4>🎟️ 兑换码</h4>
+            <div style="margin-top:10px;display:grid;gap:8px">
+                <button class="glass-btn" onclick="openRedeemModal()">🔑 输入兑换码</button>
+            </div>
+        </div>
+        <div class="glass box">
+            <h4>📜 关于</h4>
+            <div style="margin-top:10px;display:grid;gap:8px">
+                <button class="glass-btn" onclick="openVersionHistory()">📋 版本历史</button>
+            </div>
+        </div>
+    </div>
+    <div class="main">
+        <div class="glass box"><h3>🎉抽奖结果</h3><div class="lottery-result-large" id="lotteryRes">等待抽奖...</div></div>
+        <div class="consume-tip" id="consumeTip">每次抽奖消耗：10积分</div>
+        <div class="glass box"><h4>🎒背包预览</h4><div id="bagPreview" class="tip-text" style="margin-top:8px"></div></div>
+        <div class="glass box"><h4>🏆奖池预览</h4><div id="prizePreview" class="tip-text" style="margin-top:8px"></div></div>
+        <div class="glass bottom-version-info">当前版本：V9.5</div>
+    </div>
+</div>
+
+<!-- ================= 密码弹窗 ================= -->
+<div class="modal hide" id="pwdModal">
+    <div class="glass modal-inner modal-small">
+        <h2 style="color:#ffb7b7">已超额，请输入密码</h2>
+        <input class="inp" id="pwdInput" type="password" placeholder="输入密码">
+        <div style="display:grid;gap:8px;margin-top:12px">
+            <button class="glass-btn" onclick="checkPwdConfirm()">确认</button>
+            <button class="glass-btn glass-btn-danger" onclick="closePwdModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 管理员登录弹窗 ================= -->
+<div class="modal hide" id="adminLoginModal">
+    <div class="glass modal-inner modal-small">
+        <h2 style="color:#a4ffd0">🔐 管理员登录</h2>
+        <input class="inp" id="adminPwdInput" type="password" placeholder="请输入密码">
+        <div style="font-size:11px;color:#8fb8a5;margin-top:-6px;margin-bottom:10px">
+            提示：密码区分大小写，注意空格
+        </div>
+        <div style="display:grid;gap:8px;margin-top:12px">
+            <button class="glass-btn" onclick="doAdminLogin()">登录</button>
+            <button class="glass-btn glass-btn-danger" onclick="closeAdminLogin()">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- ================= 管理员后台（8 标签） ================= -->
+<div class="admin-panel hide" id="adminPanel">
+  <div class="glass admin-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="color:#a4ffd0">🛠️ 管理员后台</h2>
+      <button class="glass-btn glass-btn-danger" onclick="closeAdminPanel()">退出</button>
+    </div>
+
+    <div class="admin-tabs">
+      <div class="admin-tab active" onclick="switchAdminTab('users', event)">👥 用户</div>
+      <div class="admin-tab" onclick="switchAdminTab('prizes', event)">🏆 奖池</div>
+      <div class="admin-tab" onclick="switchAdminTab('shop', event)">🛒 商城</div>
+      <div class="admin-tab" onclick="switchAdminTab('bags', event)">🎒 背包记录</div>
+      <div class="admin-tab" onclick="switchAdminTab('vips', event)">💎 VIP</div>
+      <div class="admin-tab" onclick="switchAdminTab('codes', event)">🎟️ 兑换码</div>
+      <div class="admin-tab" onclick="switchAdminTab('config', event)">⚙️ 配置</div>
+      <div class="admin-tab" onclick="switchAdminTab('tools', event)">🔧 快捷工具</div>
+    </div>
+
+    <div id="adminUsers" class="admin-section active">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+        <input class="inp" id="userSearch" placeholder="搜索用户名" style="width:200px;margin:0" oninput="renderAdminUsers()">
+        <button class="glass-btn" onclick="renderAdminUsers()">刷新</button>
+      </div>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>用户名</th><th>积分</th><th>碎片</th><th>VIP</th><th>背包数</th>
+            <th>今日抽奖</th><th>累计获得</th><th>累计消耗</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="adminUserList"></tbody>
+      </table>
+    </div>
+
+    <div id="adminPrizes" class="admin-section">
+      <div style="display:grid;gap:10px;margin-bottom:16px">
+        <h4 style="color:#a4ffd0">新增奖品</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input class="inp" id="pzName" placeholder="奖品名称" style="width:150px;margin:0">
+          <input class="inp" id="pzWeight" type="number" placeholder="权重" style="width:90px;margin:0">
+          <select class="inp" id="pzType" style="width:130px;margin:0" onchange="onPrizeTypeChange()">
+            <option value="none">谢谢参与</option>
+            <option value="point">积分（可负）</option>
+            <option value="item">道具</option>
+          </select>
+          <input class="inp" id="pzValue" placeholder="数值/道具ID" style="width:150px;margin:0">
+          <button class="glass-btn" onclick="addPrize()">添加奖品</button>
+        </div>
+        <div style="font-size:12px;color:#a0c9b7">
+          提示：积分类型 value 填数字（可为负）；道具类型 value 填道具 ID（如 fragment、smallGift）。
+        </div>
+      </div>
+      <table class="admin-table">
+        <thead><tr><th>名称</th><th>类型</th><th>数值/道具</th><th>权重</th><th>概率</th><th>操作</th></tr></thead>
+        <tbody id="adminPrizeList"></tbody>
+      </table>
+    </div>
+
+    <div id="adminShop" class="admin-section">
+      <div style="display:grid;gap:10px;margin-bottom:16px">
+        <h4 style="color:#a4ffd0">新增商品</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input class="inp" id="spId" placeholder="商品ID（英文）" style="width:150px;margin:0">
+          <input class="inp" id="spName" placeholder="商品名" style="width:150px;margin:0">
+          <input class="inp" id="spPrice" type="number" placeholder="价格" style="width:90px;margin:0">
+          <input class="inp" id="spDesc" placeholder="描述" style="width:220px;margin:0">
+          <button class="glass-btn" onclick="addShopItem()">添加商品</button>
+        </div>
+      </div>
+      <table class="admin-table">
+        <thead><tr><th>ID</th><th>名称</th><th>价格</th><th>描述</th><th>操作</th></tr></thead>
+        <tbody id="adminShopList"></tbody>
+      </table>
+    </div>
+
+    <div id="adminBags" class="admin-section">
+      <h4 style="color:#a4ffd0">所有用户背包</h4>
+      <table class="admin-table">
+        <thead><tr><th>用户名</th><th>背包内容</th><th>操作</th></tr></thead>
+        <tbody id="adminBagList"></tbody>
+      </table>
+    </div>
+
+    <div id="adminVips" class="admin-section">
+      <div style="display:grid;gap:10px;margin-bottom:16px">
+        <h4 style="color:#a4ffd0">手动设置用户 VIP</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input class="inp" id="vipUserName" placeholder="用户名" style="width:150px;margin:0">
+          <select class="inp" id="vipLevel" style="width:140px;margin:0">
+            <option value="none">无 VIP</option>
+            <option value="normal">VIP（30天）</option>
+            <option value="super">SVIP（30天）</option>
+          </select>
+          <button class="glass-btn" onclick="adminSetVip()">设置</button>
+        </div>
+      </div>
+      <table class="admin-table">
+        <thead><tr><th>用户名</th><th>VIP等级</th><th>到期时间</th><th>操作</th></tr></thead>
+        <tbody id="adminVipList"></tbody>
+      </table>
+    </div>
+
+    <div id="adminCodes" class="admin-section">
+      <div style="display:grid;gap:10px;margin-bottom:16px">
+        <h4 style="color:#a4ffd0">生成新兑换码</h4>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select class="inp" id="newCodeType" style="width:160px;margin:0" onchange="onCodeTypeChange()">
+            <option value="point">积分</option>
+            <option value="vip">VIP会员</option>
+            <option value="svip">SVIP会员</option>
+          </select>
+          <input class="inp" id="newCodeValue" placeholder="积分数值（会员可留空）" style="width:180px;margin:0">
+          <input class="inp" id="newCodeCustom" placeholder="自定义兑换码（留空自动生成）" style="width:220px;margin:0">
+          <button class="glass-btn" onclick="generateCode()">生成兑换码</button>
+        </div>
+        <div id="generatedCodeResult" style="color:#a4ffd0;font-size:15px"></div>
+        <div style="font-size:12px;color:#a0c9b7">
+          类型说明：<b>积分</b>=发放指定积分数；<b>VIP会员</b>=开通30天VIP；<b>SVIP会员</b>=开通30天SVIP。
+        </div>
+      </div>
+      <table class="admin-table">
+        <thead><tr><th>兑换码</th><th>类型</th><th>数值/权益</th><th>已使用人数</th><th>操作</th></tr></thead>
+        <tbody id="adminCodeList"></tbody>
+      </table>
+    </div>
+
+    <div id="adminConfig" class="admin-section">
+      <div style="display:grid;gap:12px;margin-bottom:24px">
+        <h4 style="color:#a4ffd0">基础配置</h4>
+        <label>单抽消耗积分：<input class="inp" id="cfgCost" type="number" style="width:120px"></label>
+        <label>10连抽消耗积分：<input class="inp" id="cfgTen" type="number" style="width:120px"></label>
+        <label>每日免费次数：<input class="inp" id="cfgFree" type="number" style="width:120px"></label>
+        <button class="glass-btn" onclick="saveConfig()">保存基础配置</button>
+      </div>
+
+      <div style="display:grid;gap:12px;border-top:1px solid rgba(100,255,180,0.2);padding-top:18px">
+        <h4 style="color:#a4ffd0">📢 全局弹窗提醒</h4>
+        <label style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="annEnabled"> 启用弹窗
+        </label>
+        <label style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="annShowOnce"> 每个用户只弹一次（不勾选则每次打开都弹）
+        </label>
+
+        <label>弹窗类型：
+          <select class="inp" id="annMode" style="width:200px;margin:0" onchange="onAnnModeChange()">
+            <option value="text">仅文字</option>
+            <option value="image">仅图片</option>
+            <option value="both">图片 + 文字</option>
+          </select>
+        </label>
+
+        <label>标题：<input class="inp" id="annTitle" placeholder="如：📢 系统公告" style="width:300px;margin:0"></label>
+
+        <label id="annTextWrap">文字内容：
+          <textarea class="inp" id="annText" placeholder="输入弹窗文字内容..." style="width:100%;min-height:80px;margin-top:6px"></textarea>
+        </label>
+
+        <label id="annImageWrap">图片URL：
+          <input class="inp" id="annImage" placeholder="https://... 或 ./images/notice.png" style="width:100%;margin-top:6px">
+        </label>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="glass-btn" onclick="saveAnnouncement()">💾 保存弹窗设置</button>
+          <button class="glass-btn" onclick="previewAnnouncement()">👁️ 预览弹窗</button>
+          <button class="glass-btn glass-btn-danger" onclick="resetAnnouncementShown()">🔄 重置"已弹过"标记</button>
+        </div>
+      </div>
+
+      <div style="display:grid;gap:12px;border-top:1px solid rgba(100,255,180,0.2);padding-top:18px;margin-top:18px">
+        <h4 style="color:#a4ffd0">📜 版本历史</h4>
+        <div style="font-size:13px;color:#a0c9b7;margin-bottom:8px">
+          当前版本：<b style="color:#fbbf24">V9.5</b>
+        </div>
+        <div id="adminVersionHistory" style="max-height:260px;overflow:auto"></div>
+      </div>
+    </div>
+
+    <div id="adminTools" class="admin-section">
+      <div style="display:grid;gap:10px">
+        <button class="glass-btn" onclick="toolSendPoints()">💰 给所有用户发积分</button>
+        <button class="glass-btn" onclick="toolSendFragments()">🧩 给所有用户发碎片</button>
+        <button class="glass-btn" onclick="toolResetDraws()">🔄 重置所有用户今日抽奖次数</button>
+        <button class="glass-btn" onclick="toolClearAllBags()">🎒 清空所有用户背包</button>
+        <button class="glass-btn glass-btn-danger" onclick="toolFactoryReset()">⚠️ 恢复出厂设置（清除所有数据）</button>
+        <button class="glass-btn" onclick="toolChangeAdminPwd()">🔑 修改管理员密码</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ================= 隐藏工具箱 ================= -->
+<div class="toolbox-panel glass hide" id="toolboxPanel">
+  <div class="toolbox-title">🔧 隐藏工具箱</div>
+  <div class="toolbox-grid">
+    <button class="glass-btn" onclick="tbAddPoints(5000)">💰 +5000 积分</button>
+    <button class="glass-btn" onclick="tbAddPoints(20000)">💎 +20000 积分</button>
+    <button class="glass-btn" onclick="tbAddFragments(1000)">🧩 +1000 碎片</button>
+    <button class="glass-btn" onclick="tbAddFragments(10000)">🧩 +10000 碎片</button>
+    <button class="glass-btn" onclick="tbUnlockDaily()">🔓 解除今日抽奖限制</button>
+    <button class="glass-btn" onclick="tbClearCooldown()">⏱️ 清除冷却时间</button>
+    <button class="glass-btn" onclick="tbNextUltimate()">🎯 下一次必出终极大奖</button>
+    <button class="glass-btn glass-btn-danger" onclick="toggleToolbox()" style="margin-top:6px">关闭工具箱</button>
+  </div>
+</div>
+
+<!-- ================= 商城 / 背包 / VIP / 兑换码 / 奖池 ================= -->
+<div class="modal hide" id="shopModal"><div class="glass modal-inner"><h2 style="color:#a4ffd0;margin-bottom:16px">🛒 兑换商城</h2><div id="shopList"></div><button class="glass-btn glass-btn-danger" style="margin-top:16px;width:100%" onclick="closeModal('shopModal')">关闭</button></div></div>
+<div class="modal hide" id="bagModal"><div class="glass modal-inner"><h2 style="color:#a4ffd0;margin-bottom:16px">🎒 我的背包</h2><div id="bagList"></div><button class="glass-btn glass-btn-danger" style="margin-top:16px;width:100%" onclick="closeModal('bagModal')">关闭</button></div></div>
+<div class="modal hide" id="vipModal"><div class="glass modal-inner modal-small"><h2 style="color:#fbbf24;margin-bottom:16px">💎 VIP兑换</h2><div style="display:grid;gap:10px"><button class="glass-btn" onclick="buyVip('normal')">VIP月卡（500积分）</button><button class="glass-btn" style="background:rgba(245,175,25,0.25);border-color:rgba(245,175,25,0.5);color:#ffd98a" onclick="buyVip('super')">SVIP月卡（2000积分）</button></div><button class="glass-btn glass-btn-danger" style="margin-top:16px;width:100%" onclick="closeModal('vipModal')">关闭</button></div></div>
+<div class="modal hide" id="redeemModal"><div class="glass modal-inner modal-small"><h2 style="color:#a4ffd0;margin-bottom:16px">🔑 兑换码</h2><input class="inp" id="redeemInput" placeholder="输入兑换码"><button class="glass-btn" style="width:100%" onclick="doRedeem()">兑换</button><button class="glass-btn glass-btn-danger" style="margin-top:12px;width:100%" onclick="closeModal('redeemModal')">关闭</button></div></div>
+<div class="modal hide" id="prizePoolModal"><div class="glass modal-inner"><h2 style="color:#a4ffd0;margin-bottom:16px">🏆 全部奖池</h2><div id="prizePoolList"></div><button class="glass-btn glass-btn-danger" style="margin-top:16px;width:100%" onclick="closeModal('prizePoolModal')">关闭</button></div></div>
+
+<!-- ================= 碎片兑换弹窗 ================= -->
+<div class="modal hide" id="fragmentModal">
+    <div class="glass modal-inner">
+        <h2 style="color:#a4ffd0;margin-bottom:16px">🧩 碎片兑换</h2>
+        <p style="font-size:14px;color:#d0f7e4;margin-bottom:16px">
+            当前碎片：<b id="fragmentCount" style="color:#fbbf24">0</b>
+        </p>
+        <div id="fragmentShopList"></div>
+        <button class="glass-btn glass-btn-danger" style="margin-top:16px;width:100%" onclick="closeModal('fragmentModal')">关闭</button>
+    </div>
+</div>
+
+<!-- ================= 公告弹窗 ================= -->
+<div class="modal hide" id="annModal">
+    <div class="glass modal-inner modal-small" style="text-align:center">
+        <h2 id="annTitleEl" style="color:#a4ffd0;margin-bottom:16px">📢 公告</h2>
+        <div id="annImageEl" style="margin-bottom:14px"></div>
+        <div id="annTextEl" class="tip-text" style="margin-bottom:18px;white-space:pre-wrap"></div>
+        <button class="glass-btn" style="width:100%" onclick="closeAnnouncement()">确 定</button>
+    </div>
+</div>
+
+<!-- ================= 版本历史弹窗（用户端） ================= -->
+<div class="modal hide" id="versionModal">
+    <div class="glass modal-inner">
+        <h2 style="color:#a4ffd0;margin-bottom:16px">📜 版本历史</h2>
+        <div id="versionHistoryList"></div>
+        <button class="glass-btn glass-btn-danger" style="margin-top:16px;width:100%" onclick="closeModal('versionModal')">关闭</button>
+    </div>
+</div>
+
+<script>
+// ==================== 数据存储 ====================
+const DB_KEY = 'lotteryDb';
+
+// ===== 版本历史（面向用户，不含管理员内容） =====
+const VERSION_HISTORY = [
+    { version: 'V9.0', date: '2025-01-01', changes: [
+        '新增全局公告弹窗，打开页面即可看到最新通知',
+        '兑换码系统升级，支持积分、VIP、SVIP 三种类型',
+        '优化抽奖界面与奖池展示',
+        '新增版本历史记录功能'
+    ]},
+    { version: 'V9.5', date: '2025-02-01', changes: [
+        '新增碎片系统，抽奖可获得碎片',
+        '新增碎片兑换：1000碎片换50积分、1万碎片换7天VIP、10万碎片换7天SVIP',
+        '奖池新增幸运符、时间沙漏等道具',
+        '调整奖池概率，稀有奖励更珍贵'
+    ]}
+];
+
+function loadDB() {
+    try {
+        const d = JSON.parse(localStorage.getItem(DB_KEY)) || initDB();
+        if (!d.announcement) {
+            d.announcement = {
+                enabled: false, mode: 'text',
+                title: '📢 公告', text: '', image: '', showOnce: false
+            };
+        }
+        return d;
+    } catch(e) { return initDB(); }
+}
+function saveDB(db) { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+function initDB() {
+    return {
+        users: {},
+        config: { costPerDraw: 10, freeDaily: 3, tenDiscount: 90, adminPwd: 'qwezxc 123' },
+        prizes: [
+            { name: '谢谢参与',     weight: 45, type: 'none' },
+            { name: '10积分',       weight: 4,  type: 'point', value: 10 },
+            { name: '50积分',       weight: 1,  type: 'point', value: 50 },
+            { name: '-20积分',      weight: 3,  type: 'point', value: -20 },
+            { name: '碎片 x1',      weight: 5,  type: 'item', value: 'fragment' },
+            { name: '小礼包',       weight: 7,  type: 'item', value: 'smallGift' },
+            { name: '大礼包',       weight: 3,  type: 'item', value: 'bigGift' },
+            { name: '神秘宝箱',     weight: 2,  type: 'item', value: 'mysteryBox' },
+            { name: '幸运符',       weight: 2,  type: 'item', value: 'luckyCharm' },
+            { name: '时间沙漏',     weight: 1,  type: 'item', value: 'hourglass' }
+        ],
+        shopItems: [
+            { id: 'smallGift',  name: '小礼包',   price: 100, desc: '打开获得20-50随机积分' },
+            { id: 'bigGift',    name: '大礼包',   price: 300, desc: '打开获得80-200随机积分' },
+            { id: 'mysteryBox', name: '神秘宝箱', price: 800, desc: '打开获得稀有奖励' },
+            { id: 'fragment',   name: '碎片',     price: 0,   desc: '集齐1000可兑换50积分，1万换7天VIP，10万换7天SVIP' },
+            { id: 'luckyCharm', name: '幸运符',   price: 500, desc: '使用后下一次抽奖必出积分类奖品' },
+            { id: 'hourglass',  name: '时间沙漏', price: 800, desc: '使用后今日抽奖次数清零' }
+        ],
+        redeemCodes: {
+            'LUCKY2024': { type: 'point', value: 200, used: [] },
+            'VIPFREE': { type: 'vip', value: 'normal', vipLevel: 'vip', used: [] }
+        },
+        announcement: {
+            enabled: false, mode: 'text',
+            title: '📢 公告', text: '', image: '', showOnce: false
+        }
+    };
+}
+
+let db = loadDB();
+let curUser = null;
+let keyCount = 0;
+let keyTimer = null;
+let nextMustUltimate = false;
+let luckyNextDraw = false;
+
+// ===== 碎片兑换规则 =====
+const FRAGMENT_RULES = [
+    { id: 'f50',   need: 1000,   type: 'point', value: 50,       label: '50 积分' },
+    { id: 'fvip',  need: 10000,  type: 'vip',   value: 'normal', label: '7 天 VIP' },
+    { id: 'fsvip', need: 100000, type: 'vip',   value: 'super',  label: '7 天 SVIP' }
+];
+
+// ==================== 用户系统 ====================
+function doReg() {
+    const name = document.getElementById('regname').value.trim();
+    if (!name) return alert('请输入用户名');
+    if (db.users[name]) return alert('用户名已存在');
+    db.users[name] = {
+        points: 100, vip: null, vipExpire: 0, bag: [],
+        todayDraws: 0, lastLogin: '', totalGain: 100, totalConsume: 0,
+        annShown: false
+    };
+    saveDB(db);
+    alert('注册成功！赠送100积分');
+    doLogin(name);
+}
+function doLogin(name) {
+    name = name || document.getElementById('loginname').value.trim();
+    if (!name || !db.users[name]) return alert('用户不存在');
+    curUser = name;
+    const u = db.users[curUser];
+    if (u.annShown === undefined) u.annShown = false;
+    const today = new Date().toDateString();
+    if (u.lastLogin !== today) {
+        u.todayDraws = 0;
+        u.lastLogin = today;
+        let bonus = 0;
+        if (u.vip === 'normal' && Date.now() < u.vipExpire) bonus = 20;
+        if (u.vip === 'super' && Date.now() < u.vipExpire) bonus = 50;
+        if (bonus > 0) { u.points += bonus; u.totalGain += bonus; }
+        saveDB(db);
+    }
+    showMain();
+    checkAnnouncement();
+}
+function logout() {
+    curUser = null;
+    document.getElementById('mainPage').classList.add('hide');
+    document.getElementById('loginPage').classList.remove('hide');
+}
+function showMain() {
+    document.getElementById('loginPage').classList.add('hide');
+    document.getElementById('mainPage').classList.remove('hide');
+    refreshUI();
+}
+function getUserFragmentCount(u) {
+    return u.bag.filter(id => id === 'fragment').length;
+}
+function refreshUI() {
+    if (!curUser) return;
+    const u = db.users[curUser];
+    document.getElementById('curUser').textContent = curUser;
+    document.getElementById('curPoint').textContent = u.points;
+    document.getElementById('curFragment').textContent = getUserFragmentCount(u);
+    const tag = document.getElementById('vipTag');
+    if (u.vip && Date.now() < u.vipExpire) {
+        tag.className = 'vip-tag ' + (u.vip === 'super' ? 'vip-super' : 'vip-normal');
+        tag.textContent = u.vip === 'super' ? 'SVIP' : 'VIP';
+    } else { tag.className = ''; tag.textContent = ''; }
+    document.getElementById('consumeTip').textContent =
+        '每次抽奖消耗：' + db.config.costPerDraw + '积分 | 10连抽：' + db.config.tenDiscount + '积分';
+
+    const bagMap = {};
+    u.bag.forEach(id => { bagMap[id] = (bagMap[id] || 0) + 1; });
+    const bp = document.getElementById('bagPreview');
+    bp.innerHTML = Object.keys(bagMap).length
+        ? Object.entries(bagMap).map(([id, n]) => {
+            const item = db.shopItems.find(i => i.id === id);
+            return (item ? item.name : id) + ' x' + n;
+        }).join('<br>')
+        : '背包为空';
+
+    const fragCount = getUserFragmentCount(u);
+    if (fragCount > 0) {
+        bp.innerHTML = '<b style="color:#fbbf24">🧩 碎片 x' + fragCount + '</b><br>' + bp.innerHTML;
+    }
+
+    document.getElementById('prizePreview').innerHTML =
+        db.prizes.map(p => p.name + '(' + p.weight + '%)').join('、');
+}
+
+// ==================== 抽奖系统 ====================
+function drawOne() {
+    if (nextMustUltimate) {
+        nextMustUltimate = false;
+        return { name: '🏆 终极大奖', weight: 0, type: 'point', value: 10000 };
+    }
+    if (luckyNextDraw) {
+        luckyNextDraw = false;
+        const pointPrizes = db.prizes.filter(p => p.type === 'point' && p.value > 0);
+        if (pointPrizes.length) {
+            const total = pointPrizes.reduce((s, p) => s + p.weight, 0);
+            let r = Math.random() * total, acc = 0;
+            for (const p of pointPrizes) { acc += p.weight; if (r <= acc) return p; }
+            return pointPrizes[0];
+        }
+    }
+    const total = db.prizes.reduce((s, p) => s + p.weight, 0);
+    let r = Math.random() * total, acc = 0;
+    for (const p of db.prizes) { acc += p.weight; if (r <= acc) return p; }
+    return db.prizes[0];
+}
+function startLottery() {
+    const u = db.users[curUser];
+    const cost = db.config.costPerDraw;
+    if (u.points < cost) return alert('积分不足');
+    u.points -= cost; u.totalConsume += cost; u.todayDraws++;
+    const prize = drawOne();
+    applyPrize(u, prize);
+    if (u.points < 0) u.points = 0;
+    saveDB(db); refreshUI();
+    document.getElementById('lotteryRes').textContent = '🎉 ' + prize.name;
+}
+function startLottery10() {
+    const u = db.users[curUser];
+    const cost = db.config.tenDiscount;
+    if (u.points < cost) return alert('积分不足（10连抽需' + cost + '积分）');
+    u.points -= cost; u.totalConsume += cost; u.todayDraws += 10;
+    const results = [];
+    for (let i = 0; i < 10; i++) {
+        const p = drawOne(); applyPrize(u, p); results.push(p.name);
+        if (u.points < 0) u.points = 0;
+    }
+    saveDB(db); refreshUI();
+    document.getElementById('lotteryRes').innerHTML =
+        '🎉 10连抽结果：<br><span style="font-size:18px">' + results.join('、') + '</span>';
+}
+function applyPrize(u, prize) {
+    if (prize.type === 'point') {
+        u.points += prize.value;
+        if (prize.value > 0) u.totalGain += prize.value;
+    }
+    if (prize.type === 'item') { u.bag.push(prize.value); }
+}
+
+// ==================== 商城 & 背包 ====================
+function openShop() {
+    const el = document.getElementById('shopList');
+    el.innerHTML = db.shopItems
+        .filter(item => item.id !== 'fragment')
+        .map(item =>
+            '<div class="shop-item"><h4>' + item.name + ' (' + item.price + '积分)</h4>' +
+            '<p style="font-size:13px;color:#aaa">' + item.desc + '</p>' +
+            '<button class="glass-btn" style="margin-top:8px" onclick="buyItem(\'' + item.id + '\')">购买</button></div>'
+        ).join('');
+    document.getElementById('shopModal').classList.remove('hide');
+}
+function buyItem(id) {
+    const u = db.users[curUser], item = db.shopItems.find(i => i.id === id);
+    if (!item) return alert('商品不存在');
+    if (item.id === 'fragment') return alert('碎片无法直接购买，请通过抽奖获得');
+    if (u.points < item.price) return alert('积分不足');
+    u.points -= item.price; u.totalConsume += item.price; u.bag.push(id);
+    saveDB(db); refreshUI(); alert('购买成功！');
+}
+function openBag() {
+    const u = db.users[curUser], el = document.getElementById('bagList');
+    if (!u.bag.length) { el.innerHTML = '<p style="text-align:center;color:#aaa">背包为空</p>'; }
+    else {
+        const map = {};
+        u.bag.forEach(id => { map[id] = (map[id] || 0) + 1; });
+        el.innerHTML = Object.entries(map).map(([id, n]) => {
+            const item = db.shopItems.find(i => i.id === id);
+            const btnText = id === 'fragment' ? '去兑换' : '使用';
+            const action = id === 'fragment' ? "closeModal('bagModal');openFragmentShop()" : "useItem('" + id + "')";
+            return '<div class="bag-item" style="display:flex;justify-content:space-between;align-items:center">' +
+                '<span>' + (item ? item.name : id) + ' x' + n + '</span>' +
+                '<button class="glass-btn" onclick="' + action + '">' + btnText + '</button></div>';
+        }).join('');
+    }
+    document.getElementById('bagModal').classList.remove('hide');
+}
+function useItem(id) {
+    const u = db.users[curUser], idx = u.bag.indexOf(id);
+    if (idx === -1) return;
+    if (id === 'fragment') return alert('碎片不能直接使用，请到"碎片兑换"处使用');
+    u.bag.splice(idx, 1);
+    let msg = '';
+    if (id === 'smallGift') { const v = Math.floor(Math.random() * 31) + 20; u.points += v; u.totalGain += v; msg = '获得' + v + '积分'; }
+    else if (id === 'bigGift') { const v = Math.floor(Math.random() * 121) + 80; u.points += v; u.totalGain += v; msg = '获得' + v + '积分'; }
+    else if (id === 'mysteryBox') { const v = Math.floor(Math.random() * 301) + 200; u.points += v; u.totalGain += v; msg = '获得' + v + '积分'; }
+    else if (id === 'luckyCharm') { luckyNextDraw = true; msg = '✨ 已激活幸运符，下一次抽奖必出积分类奖品'; }
+    else if (id === 'hourglass') { u.todayDraws = 0; msg = '⏱️ 今日抽奖次数已清零'; }
+    else { msg = '该道具无法使用'; }
+    saveDB(db); refreshUI(); openBag(); alert(msg);
+}
+
+// ==================== 碎片兑换 ====================
+function openFragmentShop() {
+    if (!curUser) return;
+    const u = db.users[curUser];
+    const have = getUserFragmentCount(u);
+    document.getElementById('fragmentCount').textContent = have;
+
+    document.getElementById('fragmentShopList').innerHTML = FRAGMENT_RULES.map(r => {
+        const can = have >= r.need;
+        const progress = Math.min(100, (have / r.need) * 100).toFixed(1);
+        return `
+            <div class="shop-item">
+                <h4>${r.need.toLocaleString()} 碎片 → ${r.label}</h4>
+                <p style="font-size:13px;color:#aaa">当前碎片：${have} / ${r.need}（${progress}%）</p>
+                <button class="glass-btn" style="margin-top:8px"
+                    ${can ? '' : 'disabled'}
+                    onclick="exchangeFragment('${r.id}')">兑换</button>
+            </div>`;
+    }).join('');
+
+    document.getElementById('fragmentModal').classList.remove('hide');
+}
+function exchangeFragment(ruleId) {
+    const rule = FRAGMENT_RULES.find(r => r.id === ruleId);
+    if (!rule) return;
+    const u = db.users[curUser];
+    const have = getUserFragmentCount(u);
+    if (have < rule.need) return alert('碎片不足');
+
+    let removed = 0;
+    u.bag = u.bag.filter(id => {
+        if (id === 'fragment' && removed < rule.need) { removed++; return false; }
+        return true;
+    });
+
+    if (rule.type === 'point') {
+        u.points += rule.value;
+        u.totalGain += rule.value;
+    } else if (rule.type === 'vip') {
+        const now = Date.now();
+        if (u.vip === rule.value && u.vipExpire > now) {
+            u.vipExpire += 7 * 86400000;
+        } else {
+            u.vip = rule.value;
+            u.vipExpire = now + 7 * 86400000;
+        }
+    }
+
+    saveDB(db);
+    refreshUI();
+    openFragmentShop();
+    alert('✅ 兑换成功：' + rule.label);
+}
+
+// ==================== VIP ====================
+function openVipModal() { document.getElementById('vipModal').classList.remove('hide'); }
+function buyVip(type) {
+    const u = db.users[curUser], cost = type === 'super' ? 2000 : 500;
+    if (u.points < cost) return alert('积分不足');
+    u.points -= cost; u.totalConsume += cost;
+    u.vip = type; u.vipExpire = Date.now() + 30 * 86400000;
+    saveDB(db); refreshUI(); closeModal('vipModal');
+    alert((type === 'super' ? 'SVIP' : 'VIP') + '开通成功！有效期30天');
+}
+
+// ==================== 兑换码（用户端） ====================
+function openRedeemModal() { document.getElementById('redeemModal').classList.remove('hide'); }
+function doRedeem() {
+    const code = document.getElementById('redeemInput').value.trim();
+    const c = db.redeemCodes[code];
+    if (!c) return alert('无效兑换码');
+    if (c.used.includes(curUser)) return alert('你已使用过此兑换码');
+    const u = db.users[curUser];
+    if (c.type === 'point') { u.points += c.value; u.totalGain += c.value; }
+    else if (c.type === 'vip') { u.vip = c.value; u.vipExpire = Date.now() + 30 * 86400000; }
+    c.used.push(curUser);
+    saveDB(db); refreshUI(); closeModal('redeemModal'); alert('兑换成功！');
+}
+
+// ==================== 奖池查看 ====================
+function openPrizePoolView() {
+    const total = db.prizes.reduce((s, p) => s + p.weight, 0) || 1;
+    document.getElementById('prizePoolList').innerHTML = db.prizes.map(p =>
+        '<div style="padding:8px;border-bottom:1px solid rgba(100,255,180,0.15)">' +
+        p.name + ' — 权重 ' + p.weight + '（' + ((p.weight / total) * 100).toFixed(2) + '%）</div>'
+    ).join('');
+    document.getElementById('prizePoolModal').classList.remove('hide');
+}
+
+// ==================== 管理员登录 ====================
+function openAdminLogin() { document.getElementById('adminLoginModal').classList.remove('hide'); }
+function closeAdminLogin() { document.getElementById('adminLoginModal').classList.add('hide'); }
+function doAdminLogin() {
+    const pwd = db.config.adminPwd || 'qwezxc 123';
+    if (document.getElementById('adminPwdInput').value === pwd) {
+        document.getElementById('adminPwdInput').value = '';
+        closeAdminLogin();
+        document.getElementById('adminPanel').classList.remove('hide');
+        renderAdminUsers();
+        document.getElementById('cfgCost').value = db.config.costPerDraw;
+        document.getElementById('cfgTen').value  = db.config.tenDiscount;
+        document.getElementById('cfgFree').value = db.config.freeDaily;
+        onCodeTypeChange();
+        loadAnnouncementIntoForm();
+        renderVersionHistoryAdmin();
+    } else alert('密码错误');
+}
+function closeAdminPanel() { document.getElementById('adminPanel').classList.add('hide'); }
+
+// ==================== 标签切换 ====================
+function switchAdminTab(tab, ev) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+    if (ev && ev.target) ev.target.classList.add('active');
+    else {
+        const idx = { users:0, prizes:1, shop:2, bags:3, vips:4, codes:5, config:6, tools:7 }[tab];
+        const tabs = document.querySelectorAll('.admin-tab');
+        if (tabs[idx]) tabs[idx].classList.add('active');
+    }
+    const map = {
+        users:'adminUsers', prizes:'adminPrizes', shop:'adminShop',
+        bags:'adminBags', vips:'adminVips', codes:'adminCodes',
+        config:'adminConfig', tools:'adminTools'
+    };
+    document.getElementById(map[tab]).classList.add('active');
+    if (tab === 'users')  renderAdminUsers();
+    if (tab === 'prizes') renderAdminPrizes();
+    if (tab === 'shop')   renderAdminShop();
+    if (tab === 'bags')   renderAdminBags();
+    if (tab === 'vips')   renderAdminVips();
+    if (tab === 'codes')  renderAdminCodes();
+    if (tab === 'config') { loadAnnouncementIntoForm(); renderVersionHistoryAdmin(); }
+}
+
+// ==================== 用户管理 ====================
+function renderAdminUsers() {
+    const kw = (document.getElementById('userSearch')?.value || '').trim().toLowerCase();
+    const tbody = document.getElementById('adminUserList');
+    tbody.innerHTML = '';
+    Object.entries(db.users)
+        .filter(([name]) => !kw || name.toLowerCase().includes(kw))
+        .forEach(([name, u]) => {
+            const vipText = (u.vip && Date.now() < u.vipExpire)
+                ? (u.vip === 'super' ? 'SVIP' : 'VIP') : '无';
+            const frag = getUserFragmentCount(u);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td>${u.points}</td>
+                <td>${frag}</td>
+                <td>${vipText}</td>
+                <td>${u.bag.length}</td>
+                <td>${u.todayDraws || 0}</td>
+                <td>${u.totalGain || 0}</td>
+                <td>${u.totalConsume || 0}</td>
+                <td>
+                    <button class="glass-btn" style="padding:4px 8px;font-size:12px" onclick="adminAddPoint('${name}', 100)">+100</button>
+                    <button class="glass-btn" style="padding:4px 8px;font-size:12px" onclick="adminSetPoint('${name}')">改积分</button>
+                    <button class="glass-btn glass-btn-danger" style="padding:4px 8px;font-size:12px" onclick="adminDeleteUser('${name}')">删除</button>
+                </td>`;
+            tbody.appendChild(tr);
+        });
+}
+function adminAddPoint(name, amount) {
+    db.users[name].points += amount;
+    db.users[name].totalGain += amount;
+    saveDB(db); renderAdminUsers();
+    if (curUser === name) refreshUI();
+}
+function adminSetPoint(name) {
+    const v = prompt('输入新的积分值：', db.users[name].points);
+    if (v === null || isNaN(v)) return;
+    db.users[name].points = Number(v);
+    saveDB(db); renderAdminUsers();
+    if (curUser === name) refreshUI();
+}
+function adminDeleteUser(name) {
+    if (!confirm('确定删除用户 ' + name + ' ？')) return;
+    delete db.users[name];
+    saveDB(db); renderAdminUsers();
+    if (curUser === name) logout();
+}
+
+// ==================== 奖池管理 ====================
+function onPrizeTypeChange() {
+    const t = document.getElementById('pzType').value;
+    const v = document.getElementById('pzValue');
+    if (t === 'none') { v.disabled = true; v.value = ''; v.placeholder = '无需填写'; }
+    else if (t === 'point') { v.disabled = false; v.placeholder = '积分数，如 50 或 -20'; }
+    else { v.disabled = false; v.placeholder = '道具ID，如 fragment'; }
+}
+function renderAdminPrizes() {
+    const total = db.prizes.reduce((s, p) => s + p.weight, 0) || 1;
+    const tbody = document.getElementById('adminPrizeList');
+    tbody.innerHTML = '';
+    db.prizes.forEach((p, i) => {
+        const typeText = { none: '谢谢参与', point: '积分', item: '道具' }[p.type] || p.type;
+        const valText = p.type === 'none' ? '-' : (p.value ?? '-');
+        const prob = ((p.weight / total) * 100).toFixed(2) + '%';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${p.name}</td>
+            <td>${typeText}</td>
+            <td>${valText}</td>
+            <td>${p.weight}</td>
+            <td>${prob}</td>
+            <td>
+                <button class="glass-btn" style="padding:4px 8px;font-size:12px" onclick="editPrize(${i})">编辑</button>
+                <button class="glass-btn glass-btn-danger" style="padding:4px 8px;font-size:12px" onclick="deletePrize(${i})">删除</button>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+}
+function addPrize() {
+    const name = document.getElementById('pzName').value.trim();
+    const weight = Number(document.getElementById('pzWeight').value);
+    const type = document.getElementById('pzType').value;
+    const valRaw = document.getElementById('pzValue').value.trim();
+    if (!name || !weight || weight <= 0) return alert('请填写名称和有效权重');
+    let value = null;
+    if (type === 'point') {
+        if (!valRaw || isNaN(valRaw)) return alert('积分类型需填数值（可为负）');
+        value = Number(valRaw);
+    } else if (type === 'item') {
+        if (!valRaw) return alert('道具类型需填道具ID');
+        value = valRaw;
+    }
+    db.prizes.push({ name, weight, type, value });
+    saveDB(db); renderAdminPrizes();
+    document.getElementById('pzName').value = '';
+    document.getElementById('pzWeight').value = '';
+    document.getElementById('pzValue').value = '';
+    alert('✅ 已添加奖品');
+    if (curUser) refreshUI();
+}
+function editPrize(i) {
+    const p = db.prizes[i];
+    const name = prompt('奖品名称：', p.name); if (name === null) return;
+    const weight = prompt('权重（数字）：', p.weight); if (weight === null || isNaN(weight)) return;
+    p.name = name.trim() || p.name;
+    p.weight = Number(weight);
+    saveDB(db); renderAdminPrizes();
+    if (curUser) refreshUI();
+}
+function deletePrize(i) {
+    if (db.prizes.length <= 1) return alert('至少保留一个奖品');
+    if (!confirm('删除奖品：' + db.prizes[i].name + ' ？')) return;
+    db.prizes.splice(i, 1);
+    saveDB(db); renderAdminPrizes();
+    if (curUser) refreshUI();
+}
+
+// ==================== 商城管理 ====================
+function renderAdminShop() {
+    const tbody = document.getElementById('adminShopList');
+    tbody.innerHTML = '';
+    db.shopItems.forEach((it, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-family:monospace">${it.id}</td>
+            <td>${it.name}</td>
+            <td>${it.price}</td>
+            <td>${it.desc || ''}</td>
+            <td>
+                <button class="glass-btn" style="padding:4px 8px;font-size:12px" onclick="editShopItem(${i})">编辑</button>
+                <button class="glass-btn glass-btn-danger" style="padding:4px 8px;font-size:12px" onclick="deleteShopItem(${i})">删除</button>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+}
+function addShopItem() {
+    const id = document.getElementById('spId').value.trim();
+    const name = document.getElementById('spName').value.trim();
+    const price = Number(document.getElementById('spPrice').value);
+    const desc = document.getElementById('spDesc').value.trim();
+    if (!id || !name || !price || price <= 0) return alert('请填写完整信息');
+    if (db.shopItems.some(x => x.id === id)) return alert('商品ID已存在');
+    db.shopItems.push({ id, name, price, desc });
+    saveDB(db); renderAdminShop();
+    ['spId','spName','spPrice','spDesc'].forEach(k => document.getElementById(k).value = '');
+    alert('✅ 已添加商品');
+}
+function editShopItem(i) {
+    const it = db.shopItems[i];
+    const name = prompt('商品名：', it.name); if (name === null) return;
+    const price = prompt('价格：', it.price); if (price === null || isNaN(price)) return;
+    const desc = prompt('描述：', it.desc || ''); if (desc === null) return;
+    it.name = name.trim() || it.name;
+    it.price = Number(price);
+    it.desc = desc.trim();
+    saveDB(db); renderAdminShop();
+}
+function deleteShopItem(i) {
+    if (!confirm('删除商品：' + db.shopItems[i].name + ' ？')) return;
+    db.shopItems.splice(i, 1);
+    saveDB(db); renderAdminShop();
+}
+
+// ==================== 背包记录 ====================
+function renderAdminBags() {
+    const tbody = document.getElementById('adminBagList');
+    tbody.innerHTML = '';
+    Object.entries(db.users).forEach(([name, u]) => {
+        const map = {};
+        u.bag.forEach(id => { map[id] = (map[id] || 0) + 1; });
+        const text = Object.keys(map).length
+            ? Object.entries(map).map(([id, n]) => {
+                const item = db.shopItems.find(i => i.id === id);
+                return (item ? item.name : id) + ' x' + n;
+              }).join('、')
+            : '空';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${name}</td>
+            <td>${text}</td>
+            <td>
+                <button class="glass-btn" style="padding:4px 8px;font-size:12px" onclick="adminGiveItem('${name}')">补发道具</button>
+                <button class="glass-btn glass-btn-danger" style="padding:4px 8px;font-size:12px" onclick="adminClearBag('${name}')">清空</button>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+}
+function adminGiveItem(name) {
+    const id = prompt('输入道具ID（如 smallGift / fragment）：');
+    if (!id) return;
+    if (!db.shopItems.some(x => x.id === id)) return alert('道具ID不存在');
+    db.users[name].bag.push(id);
+    saveDB(db); renderAdminBags();
+    if (curUser === name) refreshUI();
+    alert('✅ 已补发');
+}
+function adminClearBag(name) {
+    if (!confirm('清空 ' + name + ' 的背包？')) return;
+    db.users[name].bag = [];
+    saveDB(db); renderAdminBags();
+    if (curUser === name) refreshUI();
+}
+
+// ==================== VIP 管理 ====================
+function renderAdminVips() {
+    const tbody = document.getElementById('adminVipList');
+    tbody.innerHTML = '';
+    Object.entries(db.users).forEach(([name, u]) => {
+        const active = u.vip && Date.now() < u.vipExpire;
+        const level = active ? (u.vip === 'super' ? 'SVIP' : 'VIP') : '无';
+        const exp = active ? new Date(u.vipExpire).toLocaleDateString() : '-';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${name}</td>
+            <td>${level}</td>
+            <td>${exp}</td>
+            <td>
+                <button class="glass-btn" style="padding:4px 8px;font-size:12px" onclick="adminQuickVip('${name}','normal')">开VIP</button>
+                <button class="glass-btn" style="padding:4px 8px;font-size:12px" onclick="adminQuickVip('${name}','super')">开SVIP</button>
+                <button class="glass-btn glass-btn-danger" style="padding:4px 8px;font-size:12px" onclick="adminQuickVip('${name}','none')">取消</button>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+}
+function adminSetVip() {
+    const name = document.getElementById('vipUserName').value.trim();
+    const level = document.getElementById('vipLevel').value;
+    if (!db.users[name]) return alert('用户不存在');
+    adminQuickVip(name, level);
+}
+function adminQuickVip(name, level) {
+    const u = db.users[name];
+    if (!u) return;
+    if (level === 'none') { u.vip = null; u.vipExpire = 0; }
+    else { u.vip = level; u.vipExpire = Date.now() + 30 * 86400000; }
+    saveDB(db); renderAdminVips(); renderAdminUsers();
+    if (curUser === name) refreshUI();
+    alert('✅ 已设置');
+}
+
+// ==================== 兑换码管理 ====================
+function onCodeTypeChange() {
+    const type = document.getElementById('newCodeType').value;
+    const valInput = document.getElementById('newCodeValue');
+    if (type === 'point') {
+        valInput.disabled = false;
+        valInput.placeholder = '输入积分数值，如 500';
+    } else {
+        valInput.disabled = true;
+        valInput.value = '';
+        valInput.placeholder = '会员类型无需填写数值';
+    }
+}
+function typeLabel(type) {
+    return { point: '积分', vip: 'VIP会员', svip: 'SVIP会员' }[type] || type;
+}
+function generateCode() {
+    const type = document.getElementById('newCodeType').value;
+    const val = document.getElementById('newCodeValue').value.trim();
+    const custom = document.getElementById('newCodeCustom').value.trim();
+    if (type === 'point' && (!val || isNaN(val) || Number(val) <= 0)) return alert('请输入有效的积分数值');
+    const code = custom || ('CD-' + Math.random().toString(36).substring(2, 10).toUpperCase());
+    if (db.redeemCodes[code]) return alert('该兑换码已存在，请换一个');
+    let value;
+    if (type === 'point') value = Number(val);
+    else if (type === 'vip') value = 'normal';
+    else value = 'super';
+    db.redeemCodes[code] = {
+        type: type === 'svip' ? 'vip' : type,
+        value,
+        vipLevel: type,
+        used: []
+    };
+    saveDB(db);
+    document.getElementById('generatedCodeResult').textContent =
+        '✅ 新兑换码: ' + code + '（类型：' + typeLabel(type) + '）';
+    renderAdminCodes();
+    document.getElementById('newCodeCustom').value = '';
+    if (type === 'point') document.getElementById('newCodeValue').value = '';
+}
+function renderAdminCodes() {
+    const tbody = document.getElementById('adminCodeList');
+    tbody.innerHTML = '';
+    Object.entries(db.redeemCodes).forEach(([code, c]) => {
+        let level = c.vipLevel;
+        if (!level) {
+            if (c.type === 'point') level = 'point';
+            else level = (c.value === 'super') ? 'svip' : 'vip';
+        }
+        const label = typeLabel(level);
+        const valText = level === 'point'
+            ? c.value + ' 积分'
+            : (level === 'svip' ? 'SVIP 30天' : 'VIP 30天');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-family:monospace;color:#a4ffd0">${code}</td>
+            <td>${label}</td>
+            <td>${valText}</td>
+            <td>${c.used.length}</td>
+            <td>
+                <button class="glass-btn glass-btn-danger" style="padding:4px 10px;font-size:12px"
+                    onclick="deleteCode('${code}')">删除</button>
+            </td>`;
+        tbody.appendChild(tr);
+    });
+}
+function deleteCode(code) {
+    if (!confirm('确定删除兑换码 ' + code + ' ？')) return;
+    delete db.redeemCodes[code];
+    saveDB(db); renderAdminCodes();
+}
+
+// ==================== 全局配置 ====================
+function saveConfig() {
+    db.config.costPerDraw = parseInt(document.getElementById('cfgCost').value) || 10;
+    db.config.tenDiscount = parseInt(document.getElementById('cfgTen').value) || 90;
+    db.config.freeDaily = parseInt(document.getElementById('cfgFree').value) || 3;
+    saveDB(db);
+    alert('✅ 配置已保存');
+    if (curUser) refreshUI();
+}
+
+// ==================== 弹窗提醒（管理员端） ====================
+function onAnnModeChange() {
+    const mode = document.getElementById('annMode').value;
+    document.getElementById('annTextWrap').style.display  = (mode === 'image') ? 'none' : 'block';
+    document.getElementById('annImageWrap').style.display = (mode === 'text')  ? 'none' : 'block';
+}
+function loadAnnouncementIntoForm() {
+    const a = db.announcement || {};
+    document.getElementById('annEnabled').checked  = !!a.enabled;
+    document.getElementById('annShowOnce').checked = !!a.showOnce;
+    document.getElementById('annMode').value       = a.mode || 'text';
+    document.getElementById('annTitle').value      = a.title || '';
+    document.getElementById('annText').value       = a.text || '';
+    document.getElementById('annImage').value      = a.image || '';
+    onAnnModeChange();
+}
+function saveAnnouncement() {
+    const mode = document.getElementById('annMode').value;
+    const text = document.getElementById('annText').value.trim();
+    const image = document.getElementById('annImage').value.trim();
+    if (mode === 'text' && !text) return alert('请填写文字内容');
+    if (mode === 'image' && !image) return alert('请填写图片URL');
+    if (mode === 'both' && (!text || !image)) return alert('请同时填写图片和文字');
+    db.announcement = {
+        enabled:  document.getElementById('annEnabled').checked,
+        showOnce: document.getElementById('annShowOnce').checked,
+        mode,
+        title: document.getElementById('annTitle').value.trim() || '📢 公告',
+        text, image
+    };
+    saveDB(db);
+    alert('✅ 弹窗设置已保存');
+}
+function previewAnnouncement() {
+    const temp = {
+        enabled: true,
+        mode: document.getElementById('annMode').value,
+        title: document.getElementById('annTitle').value.trim() || '📢 公告',
+        text: document.getElementById('annText').value.trim(),
+        image: document.getElementById('annImage').value.trim()
+    };
+    showAnnouncement(temp);
+}
+function resetAnnouncementShown() {
+    if (!confirm('重置所有用户的"已弹过"标记？')) return;
+    Object.values(db.users).forEach(u => u.annShown = false);
+    saveDB(db);
+    alert('✅ 已重置');
+}
+
+// ==================== 弹窗提醒（用户端） ====================
+function showAnnouncement(a) {
+    document.getElementById('annTitleEl').textContent = a.title || '📢 公告';
+    const imgWrap = document.getElementById('annImageEl');
+    if ((a.mode === 'image' || a.mode === 'both') && a.image) {
+        imgWrap.innerHTML = '<img src="' + a.image + '" style="max-width:100%;border-radius:10px" onerror="this.style.display=\'none\'">';
+        imgWrap.style.display = 'block';
+    } else {
+        imgWrap.innerHTML = ''; imgWrap.style.display = 'none';
+    }
+    const txtWrap = document.getElementById('annTextEl');
+    if ((a.mode === 'text' || a.mode === 'both') && a.text) {
+        txtWrap.textContent = a.text; txtWrap.style.display = 'block';
+    } else {
+        txtWrap.textContent = ''; txtWrap.style.display = 'none';
+    }
+    document.getElementById('annModal').classList.remove('hide');
+}
+function closeAnnouncement() {
+    document.getElementById('annModal').classList.add('hide');
+    if (curUser && db.users[curUser]) {
+        db.users[curUser].annShown = true;
+        saveDB(db);
+    }
+}
+function checkAnnouncement() {
+    const a = db.announcement;
+    if (!a || !a.enabled) return;
+    if (a.mode === 'text' && !a.text) return;
+    if (a.mode === 'image' && !a.image) return;
+    if (a.mode === 'both' && (!a.text || !a.image)) return;
+    if (a.showOnce && curUser && db.users[curUser] && db.users[curUser].annShown) return;
+    showAnnouncement(a);
+}
+
+// ==================== 快捷工具 ====================
+function toolSendPoints() {
+    const amount = prompt('给每位用户发放积分：', '100');
+    if (!amount || isNaN(amount)) return;
+    Object.values(db.users).forEach(u => { u.points += Number(amount); u.totalGain += Number(amount); });
+    saveDB(db);
+    if (curUser) refreshUI();
+    alert(`✅ 已发放 ${amount} 积分`);
+}
+function toolSendFragments() {
+    const amount = prompt('给每位用户发放碎片数量：', '1000');
+    if (!amount || isNaN(amount) || Number(amount) <= 0) return;
+    const n = Number(amount);
+    Object.values(db.users).forEach(u => {
+        for (let i = 0; i < n; i++) u.bag.push('fragment');
+    });
+    saveDB(db);
+    if (curUser) refreshUI();
+    alert(`✅ 已发放 ${n} 碎片`);
+}
+function toolResetDraws() {
+    if (!confirm('重置所有用户今日抽奖次数？')) return;
+    Object.values(db.users).forEach(u => u.todayDraws = 0);
+    saveDB(db);
+    if (curUser) refreshUI();
+    alert('✅ 已重置');
+}
+function toolClearAllBags() {
+    if (!confirm('清空所有用户背包？此操作不可撤销！')) return;
+    Object.values(db.users).forEach(u => u.bag = []);
+    saveDB(db);
+    if (curUser) refreshUI();
+    alert('✅ 已清空');
+}
+function toolFactoryReset() {
+    if (!confirm('⚠️ 清除所有数据？不可撤销！')) return;
+    if (!confirm('再次确认：真的要恢复出厂设置？')) return;
+    localStorage.removeItem(DB_KEY);
+    location.reload();
+}
+function toolChangeAdminPwd() {
+    const pwd = prompt('输入新的管理员密码：');
+    if (!pwd) return;
+    db.config.adminPwd = pwd;
+    saveDB(db);
+    alert('✅ 管理员密码已修改');
+}
+
+// ==================== 版本历史 ====================
+function renderVersionHistoryAdmin() {
+    const el = document.getElementById('adminVersionHistory');
+    if (!el) return;
+    el.innerHTML = VERSION_HISTORY.slice().reverse().map(v => `
+        <div class="version-item">
+            <h5>${v.version}</h5>
+            <p>${v.changes.map(c => '· ' + c).join('<br>')}</p>
+            <div class="vdate">📅 ${v.date}</div>
+        </div>
+    `).join('');
+}
+function openVersionHistory() {
+    const el = document.getElementById('versionHistoryList');
+    el.innerHTML = VERSION_HISTORY.slice().reverse().map(v => `
+        <div class="version-item">
+            <h5>${v.version}</h5>
+            <p>${v.changes.map(c => '· ' + c).join('<br>')}</p>
+            <div class="vdate">📅 ${v.date}</div>
+        </div>
+    `).join('');
+    document.getElementById('versionModal').classList.remove('hide');
+}
+
+// ==================== 隐藏工具箱 ====================
+function toggleToolbox() {
+    document.getElementById('toolboxPanel').classList.toggle('hide');
+}
+function tbAddPoints(amount) {
+    if (!curUser) return alert('请先登录再使用工具箱');
+    db.users[curUser].points += amount;
+    db.users[curUser].totalGain += amount;
+    saveDB(db); refreshUI();
+    alert(`✅ 已为 ${curUser} 添加 ${amount} 积分`);
+}
+function tbAddFragments(amount) {
+    if (!curUser) return alert('请先登录再使用工具箱');
+    for (let i = 0; i < amount; i++) db.users[curUser].bag.push('fragment');
+    saveDB(db); refreshUI();
+    alert(`✅ 已为 ${curUser} 添加 ${amount} 碎片`);
+}
+function tbUnlockDaily() {
+    if (!curUser) return alert('请先登录');
+    db.users[curUser].todayDraws = 0;
+    saveDB(db); refreshUI();
+    alert('✅ 今日抽奖限制已解除');
+}
+function tbClearCooldown() {
+    if (!curUser) return alert('请先登录');
+    db.users[curUser].lastLogin = '';
+    saveDB(db); refreshUI();
+    alert('✅ 冷却时间已清除');
+}
+function tbNextUltimate() {
+    nextMustUltimate = true;
+    alert('✅ 下一次抽奖必定获得终极大奖（10000积分）！');
+}
+
+// ==================== 键盘监听 ====================
+let ctrlCount = 0, altCount = 0;
+let ctrlTimer = null, altTimer = null;
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Control') {
+        ctrlCount++;
+        clearTimeout(ctrlTimer);
+        ctrlTimer = setTimeout(() => { ctrlCount = 0; }, 2000);
+    } else if (e.key === 'Alt') {
+        altCount++;
+        clearTimeout(altTimer);
+        altTimer = setTimeout(() => { altCount = 0; }, 2000);
+    }
+    if (ctrlCount >= 5 && altCount >= 5) {
+        ctrlCount = 0; altCount = 0;
+        clearTimeout(ctrlTimer); clearTimeout(altTimer);
+        openAdminLogin();
+    }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Backspace' || e.key === ' ') {
+        keyCount++;
+        clearTimeout(keyTimer);
+        keyTimer = setTimeout(() => { keyCount = 0; }, 1500);
+        if (keyCount >= 5) { keyCount = 0; toggleToolbox(); }
+    } else if (e.key !== 'Control' && e.key !== 'Alt') {
+        keyCount = 0;
+    }
+});
+
+// ==================== 通用工具 ====================
+function closeModal(id) { document.getElementById(id).classList.add('hide'); }
+function checkPwdConfirm() { closePwdModal(); }
+function closePwdModal() { document.getElementById('pwdModal').classList.add('hide'); }
+</script>
+</body>
+</html>
